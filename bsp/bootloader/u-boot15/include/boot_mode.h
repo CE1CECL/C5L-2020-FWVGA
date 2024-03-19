@@ -1,7 +1,7 @@
 #ifndef _BOOT_MODE_H_
 #define _BOOT_MODE_H_
 #include <common.h>
-#include "soc/sprd/board.h"
+#include <soc/sprd/board.h>
 
 #ifdef CUSTOM_BACKLIGHT_ON
 #define BACKLIGHT_ON CUSTOM_BACKLIGHT_ON

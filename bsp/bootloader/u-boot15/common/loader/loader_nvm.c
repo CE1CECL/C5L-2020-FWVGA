@@ -44,7 +44,7 @@ extern void aon_lpc_config();
 #include "dev_tree.h"
 #endif
 
-#include "../../../../kernel/kernel4.14/include/soc/sprd/board.h"
+#include <soc/sprd/board.h>
 
 #if (defined CONFIG_SECBOOT) && (defined CONFIG_VBOOT_V2)
 unsigned os_version __attribute__((aligned(4096))); /*must be PAGE ALIGNED*/

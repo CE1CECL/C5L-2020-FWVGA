@@ -316,6 +316,16 @@
 #define CORE_CP2                          BIT_2
 
 /*lcd config*/
+
+#define ZCFG_TSX_32KLESS
+#define CONFIG_UDC
+#define CONFIG_UDC_LCD_MIPI
+#define CONFIG_UDC_SC9832E
+#define CONFIG_UDC_VER_5_1_3
+#define CONFIG_UDC_LCD
+
+#define CONFIG_VIDEO_SPRD
+
 #define CONFIG_LCD
 #ifdef CONFIG_LCD
 #define CONFIG_DSIH_VERSION_1P21A

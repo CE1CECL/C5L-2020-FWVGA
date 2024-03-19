@@ -417,7 +417,7 @@ class BuilderThread(threading.Thread):
                 # files that created warnings this time. Otherwise an
                 # incremental build may not build the same file, and we will
                 # think that the warning has gone away.
-                # We could avoid this by using -Werror everywhere...
+                # We could avoid this by using  everywhere...
                 # For errors, the problem doesn't happen, since presumably
                 # the build stopped and didn't generate output, so will retry
                 # that file next time. So we could detect warnings and deal

@@ -1,0 +1,6 @@
+clear
+rm -rfv $(pwd)/O
+make DEVICE_TREE=sl8541e_1h10 O=$(pwd)/O ARCH=arm CROSS_COMPILE=$(pwd)/T/bin/aarch64-linux-gnu- sl8541e_1h10_defconfig
+make DEVICE_TREE=sl8541e_1h10 O=$(pwd)/O ARCH=arm CROSS_COMPILE=$(pwd)/T/bin/aarch64-linux-gnu-
+./imgheaderinsert ./O64/u-boot.bin 1
+./imgheaderinsert ./O64/u-boot-dtb.bin 1

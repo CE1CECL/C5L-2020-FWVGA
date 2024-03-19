@@ -13,7 +13,7 @@
 
 #include "sprd_dsi.h"
 #include "dsi/mipi_dsi_api.h"
-#include "soc/sprd/board.h"
+#include <soc/sprd/board.h>
 
 #define MAX_TIME_HS2LP       120 /* unit: ns */
 #define MAX_TIME_LP2HS       500 /* unit: ns */

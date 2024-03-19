@@ -19,7 +19,7 @@
 #include <asm/arch/sprd_reg.h>
 #include <hwfeature.h>
 
-#include "soc/sprd/board.h"
+#include <soc/sprd/board.h>
 #ifdef ZCFG_KEY_VOLUME_DOWN_ANTI_SHAKE
 #include <asm/io.h>
 #include <asm/arch/pinmap.h>

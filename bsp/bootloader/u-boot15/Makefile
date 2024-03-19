@@ -598,7 +598,7 @@ endif
 endif
 
 # Prohibit date/time macros, which would make the build non-deterministic
-KBUILD_CFLAGS   += $(call cc-option,-Werror=date-time)
+KBUILD_CFLAGS   += $(call cc-option,-Wdate-time)
 
 ifneq ($(CONFIG_SYS_TEXT_BASE),)
 KBUILD_CPPFLAGS += -DCONFIG_SYS_TEXT_BASE=$(CONFIG_SYS_TEXT_BASE)
@@ -732,13 +732,13 @@ else
 PLATFORM_LIBDX =
 endif
 PLATFORM_LIBS += $(PLATFORM_LIBDX)
-ifeq ($(CONFIG_UDC),y)
-ifeq ($(BSP_BOARD_ARCH), arm)
-PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc_32b
-else
+#ifeq ($(CONFIG_UDC),y)
+#ifeq ($(BSP_BOARD_ARCH), arm)
+#PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc_32b
+#else
 PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc
-endif
-endif
+#endif
+#endif
 export PLATFORM_LIBS
 export PLATFORM_LIBGCC
 

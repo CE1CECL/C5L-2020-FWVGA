@@ -1,0 +1,6 @@
+clear
+rm -rfv $(pwd)/O32
+make DEVICE_TREE=sp9832e_1h10_32b O=$(pwd)/O32 ARCH=arm CROSS_COMPILE=$(pwd)/T32/bin/arm-eabi- sp9832e_1h10_32b_defconfig
+make DEVICE_TREE=sp9832e_1h10_32b O=$(pwd)/O32 ARCH=arm CROSS_COMPILE=$(pwd)/T32/bin/arm-eabi-
+./imgheaderinsert ./O32/u-boot.bin 1
+./imgheaderinsert ./O32/u-boot-dtb.bin 1
