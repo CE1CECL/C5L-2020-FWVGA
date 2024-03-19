@@ -1,3 +1,5 @@
-menu "Command line interface"
-
-endmenu
+config DDR_MEM_TEST
+	bool "sprd ddr test"
+	default n
+	help
+	  DDR scan test

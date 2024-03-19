@@ -22,6 +22,9 @@
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
 #include <linux/workqueue.h>
+#ifdef CONFIG_UDC
+#include <linux/udc.h>
+#endif
 
 enum {
 	CMD_CODE_INIT = 0,
@@ -59,10 +62,18 @@ struct dsi_cmd_desc {
 	u8 payload[];
 };
 
+#ifdef CONFIG_UDC
+struct gpio_timing {
+	u32 gpio;
+	u32 level;
+	u32 delay;
+};
+#else
 struct gpio_timing {
 	u32 level;
 	u32 delay;
 };
+#endif
 
 struct reset_sequence {
 	u32 items;
@@ -117,8 +128,8 @@ struct sprd_oled {
 	int cmds_total;
 	int max_level;
 };
-
+#ifndef CONFIG_UDC
 int sprd_panel_parse_lcddtb(struct device_node *lcd_node,
 	struct sprd_panel *panel);
-
+#endif
 #endif

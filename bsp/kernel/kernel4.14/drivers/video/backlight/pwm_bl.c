@@ -23,6 +23,8 @@
 #include <linux/pwm_backlight.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <soc/sprd/board.h>
+#include <linux/delay.h>
 
 struct pwm_bl_data {
 	struct pwm_device	*pwm;
@@ -98,11 +100,34 @@ static int compute_duty_cycle(struct pwm_bl_data *pb, int brightness)
 	return duty_cycle + lth;
 }
 
+static bool cali_mode;
+
+static int boot_mode_check(char *str)
+{
+        if (str != NULL && !strncmp(str, "cali", strlen("cali")))
+                cali_mode = true;
+        else
+                cali_mode = false;
+        return 0;
+}
+__setup("androidboot.mode=", boot_mode_check);
+
 static int pwm_backlight_update_status(struct backlight_device *bl)
 {
 	struct pwm_bl_data *pb = bl_get_data(bl);
 	int brightness = bl->props.brightness;
 	struct pwm_state state;
+#ifdef ZCFG_BACKLIGHT_RESUME_DELAY
+	static int flag_backlight_state = 0;
+#endif
+#ifdef ZCFG_PWM_BACKLIGHTNESS_LEVEL
+	brightness =( brightness * ZCFG_PWM_BACKLIGHTNESS_LEVEL)/100;
+#endif
+
+  if (cali_mode) {
+     pr_info("enter calibration mode, disable pwm backlight brightness\n");
+     return 0;
+  }
 
 	if (bl->props.power != FB_BLANK_UNBLANK ||
 	    bl->props.fb_blank != FB_BLANK_UNBLANK ||
@@ -113,12 +138,23 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 		brightness = pb->notify(pb->dev, brightness);
 
 	if (brightness > 0) {
+#ifdef ZCFG_BACKLIGHT_RESUME_DELAY
+	if (flag_backlight_state == 1) {
+		mdelay(ZCFG_BACKLIGHT_RESUME_DELAY);
+		flag_backlight_state = 0;
+	}
+#endif
 		pwm_get_state(pb->pwm, &state);
 		state.duty_cycle = compute_duty_cycle(pb, brightness);
 		pwm_apply_state(pb->pwm, &state);
 		pwm_backlight_power_on(pb);
-	} else
+	} else {
+#ifdef ZCFG_BACKLIGHT_RESUME_DELAY
+		flag_backlight_state = 1;
+#endif
 		pwm_backlight_power_off(pb);
+	}
+
 
 	if (pb->notify_after)
 		pb->notify_after(pb->dev, brightness);

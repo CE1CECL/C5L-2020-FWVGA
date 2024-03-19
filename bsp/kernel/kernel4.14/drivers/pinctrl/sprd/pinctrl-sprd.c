@@ -1112,6 +1112,58 @@ void sprd_pinctrl_shutdown(struct platform_device *pdev)
 {
 	struct pinctrl *pinctl;
 	struct pinctrl_state *state;
+#ifdef CONFIG_PINCTRL_SPRD_SHARKL3
+	void __iomem *iomem_regs = NULL;
+	dev_info(&pdev->dev, "set RFSDA0 RFSCK0 RFSEN0 low \n");
+	iomem_regs = ioremap_nocache(0x402a0280, 0x4);
+	dev_info(&pdev->dev, "0x402a0280 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a0280 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402a0284, 0x4);
+	dev_info(&pdev->dev, "0x402a0284 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a0284 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402a0288, 0x4);
+	dev_info(&pdev->dev, "0x402a0288 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a0288 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+
+	dev_info(&pdev->dev, "set RFSDA1 RFSCK1 RFSEN1 low \n");
+	iomem_regs = ioremap_nocache(0x402a0274, 0x4);
+	dev_info(&pdev->dev, "0x402a0274 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a0274 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402a0278, 0x4);
+	dev_info(&pdev->dev, "0x402a0278 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a0278 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402a027c, 0x4);
+	dev_info(&pdev->dev, "0x402a027c = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x30, iomem_regs);
+	dev_info(&pdev->dev, "0x402a027c = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+
+	iomem_regs = ioremap_nocache(0x402c0004, 0x4);
+	dev_info(&pdev->dev, "0x402c0004 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x700E, iomem_regs);
+	dev_info(&pdev->dev, "0x402c0004 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402c0008, 0x4);
+	dev_info(&pdev->dev, "0x402c0008 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x700E, iomem_regs);
+	dev_info(&pdev->dev, "0x402c0008 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+	iomem_regs = ioremap_nocache(0x402c0000, 0x4);
+	dev_info(&pdev->dev, "0x402c0000 = 0x%08x\n",readl_relaxed(iomem_regs));
+	writel_relaxed(0x00, iomem_regs);
+	dev_info(&pdev->dev, "0x402c0000 = 0x%08x\n",readl_relaxed(iomem_regs));
+	iounmap(iomem_regs);
+#endif
 
 	pinctl = devm_pinctrl_get(&pdev->dev);
 	if (IS_ERR(pinctl))

@@ -105,9 +105,13 @@ static int get_adc_value_board(int channel)
 static int get_clockid(void)
 {
 	unsigned int gpio_val = 0;
-
+	#if defined(ZCFG_TSX_32KLESS)
+	gpio_val =0;
+	#else
 	gpio_val = gpio_state(LB_GPIO);
-
+	//#error "At present, we only support TSX solution"
+	#endif
+	
 	return gpio_val;
 }
 

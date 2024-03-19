@@ -20,12 +20,12 @@
 		#size-cells = <2>;
 		ranges;
 
-		fastboot_reserved: fastbootbuffer@82000000{
-			reg = <0x0 0x82000000 0x0 0x10000000>;
+		fastboot_reserved: fastbootbuffer@b0000000{
+			reg = <0x0 0xb0000000  0x0 0x53400000>;
 		};
 
-		download_reserved: sparsebuffer@82000000{
-			reg = <0x0 0x82000000 0x0 0x10000000>;
+		download_reserved: sparsebuffer@0xb0000000{
+			reg = <0x0 0xb0000000 0x0 0x53400000>;
 		};
 
 		dl_alt1_reserved: alterbuffer1@92000000{
@@ -69,6 +69,11 @@
 		logo_reserved: logobuffer@fd580000{
 			reg = <0x0 0xfd580000 0x0 0x7e9000>;
 		};
+		/*64K udc reserved for LCD*/
+		udc_reserved: udc@93000000{
+			reg = <0x0 0x93000000 0x0 0x10000>;
+		};
+		
 	};
 
 	ion {

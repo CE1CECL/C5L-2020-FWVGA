@@ -136,6 +136,14 @@ struct sensor_muti_aec_i2c_tag {
 	uint16_t ssize_2;
 };
 
+struct sensor_name_tag{
+	    char main_sensor[20];
+	   char main2_sensor[20];
+	   char sub_sensor[20];
+	   char sub2_sensor[20];
+};
+
+
 #define AEC_I2C_SETTINGS_MAX 64
 #define AEC_I2C_SENSOR_MAX 3
 
@@ -191,6 +199,10 @@ struct sensor_muti_aec_i2c_tag {
 	_IOW(SENSOR_IOC_MAGIC,  23, struct sensor_muti_aec_i2c_tag)
 #define SENSOR_IO_IF_SWITCH            \
 	_IOW(SENSOR_IOC_MAGIC,  24, struct sensor_if_cfg_tag)
+	
+#define SENSOR_IO_SAVE_NAME	\
+	_IOW(SENSOR_IOC_MAGIC,  25, uint32_t)
+	
 #define SENSOR_IO_READ_OTPDATA	\
 	_IOWR(SENSOR_IOC_MAGIC, 254, struct _sensor_otp_param_tag)
 #define SENSOR_IO_GET_SOCID	\

@@ -103,6 +103,7 @@ struct sensor_cali_info {
 	unsigned char size;
 	void *data;
 };
+static int sensorinfo_flag=0;
 
 static struct sensor_cali_info acc_cali_info;
 static struct sensor_cali_info gyro_cali_info;
@@ -110,6 +111,31 @@ static struct sensor_cali_info mag_cali_info;
 static struct sensor_cali_info light_cali_info;
 static struct sensor_cali_info prox_cali_info;
 static struct sensor_cali_info pressure_cali_info;
+
+
+
+static void shub_get_sensor_info(void)
+{
+	int i=0;
+	char *	TB_TYPENAME[] = {
+	   "[Acc]:", "[Mag]:", "[Gyr]:",
+	   "[Prox]:", "[Light]:", "[Prs]:"};
+
+	extern void zyt_info_s2(char* ,char*);
+	for (i = 0; i < _HW_SENSOR_TOTAL; i++) {
+
+		if (hw_sensor_id[i].id_status == _IDSTA_OK &&
+			hw_sensor_id[i].pname != NULL) {
+			if(hw_sensor_id[i].id_status)
+			{
+			zyt_info_s2(TB_TYPENAME[i],hw_sensor_id[i].pname);
+			sensorinfo_flag=1;
+			//printk("jinq shub_get_sensor_info :%s=%s\n\n",TB_TYPENAME[i], hw_sensor_id[i].pname);
+			}
+		}
+		//printk("jinq shub_get_sensor_info hw_sensor_id[i].id_status:%s\n\n",hw_sensor_id[i].id_status,TB_TYPENAME[i]);
+	}
+}
 
 static void get_sensor_info(char **sensor_name, int sensor_type, int success_num)
 {
@@ -877,6 +903,10 @@ static void shub_download_calibration_data_work(struct work_struct *work)
 
 	if (sensor->mcu_mode == SHUB_NORMAL) {
 		shub_download_calibration_data(sensor);
+		if(!sensorinfo_flag)
+		{
+		shub_get_sensor_info();
+		}
 	}
 }
 
@@ -2340,6 +2370,32 @@ static void shub_config_init(struct shub_data *sensor)
 	sensor->is_sensorhub = 1;
 }
 
+int peri_send_sensor_event_to_iio(u8 *data, u16 len)
+{
+	u8 event[MAX_CM4_MSG_SIZE];
+
+	mutex_lock(&g_sensor->mutex_send);
+	memset(event, 0x00, MAX_CM4_MSG_SIZE);
+	memcpy(event, data, len);
+
+	if (g_sensor->indio_dev->active_scan_mask &&
+			(!bitmap_empty(g_sensor->indio_dev->active_scan_mask,
+			g_sensor->indio_dev->masklength))) {
+		// printk(&g_sensor->sensor_pdev->dev,
+		// 		 "event[0] = %d event[1] = %d, event[2] = %d\n",
+		// 		 event[0], event[1], event[2]);
+		iio_push_to_buffers(g_sensor->indio_dev, event);
+	} else if (g_sensor->indio_dev->active_scan_mask == NULL) {
+		dev_err(&g_sensor->sensor_pdev->dev,
+			"active_scan_mask = NULL, event might be missing\n");
+	}
+
+	mutex_unlock(&g_sensor->mutex_send);
+
+	return 0;
+}
+EXPORT_SYMBOL(peri_send_sensor_event_to_iio);
+
 static int shub_probe(struct platform_device *pdev)
 {
 	struct shub_data *mcu;
@@ -2435,7 +2491,6 @@ static int shub_probe(struct platform_device *pdev)
 				   SMSG_CH_PIPE, SIPC_PM_BUFID1);
 	mcu->early_suspend.notifier_call = shub_notifier_fn;
 	register_pm_notifier(&mcu->early_suspend);
-
 	return 0;
 
 err_free_mem:

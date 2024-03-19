@@ -7,6 +7,9 @@
 
 wm97xx-ts-y := wm97xx-core.o
 
+zyt_TP_LISTS := $(subst ",,$(CONFIG_ZYT_TP_LIST))
+obj-y += $(foreach item,$(zyt_TP_LISTS),$(item)/)
+
 obj-$(CONFIG_TOUCHSCREEN_PROPERTIES)	+= of_touchscreen.o
 obj-$(CONFIG_TOUCHSCREEN_88PM860X)	+= 88pm860x-ts.o
 obj-$(CONFIG_TOUCHSCREEN_AD7877)	+= ad7877.o

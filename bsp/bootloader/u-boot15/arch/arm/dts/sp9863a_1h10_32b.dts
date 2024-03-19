@@ -69,6 +69,10 @@
 		logo_reserved: logobuffer@9e000000{
 			reg = <0x9e000000 0x007e9000>;
 		};
+		/*64K udc reserved for LCD*/
+		udc_reserved: udc@93000000{
+			reg = <0x93000000 0x10000>;
+		};
 	};
 
 	ion {

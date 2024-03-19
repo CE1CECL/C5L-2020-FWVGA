@@ -116,7 +116,98 @@ static int panel_if_uinit(void)
 		return -1;
 	}
 }
+#ifdef CONFIG_UDC_LCD
 
+#if 0
+static int panel_reset(int on)
+{
+	if (on) {
+		sprd_gpio_request(NULL, CONFIG_LCM_GPIO_RSTN);
+		sprd_gpio_direction_output(NULL, CONFIG_LCM_GPIO_RSTN, 1);
+		mdelay(5);
+		sprd_gpio_direction_output(NULL, CONFIG_LCM_GPIO_RSTN, 0);
+		mdelay(5);
+		sprd_gpio_direction_output(NULL, CONFIG_LCM_GPIO_RSTN, 1);
+		mdelay(20);
+	} else {
+		sprd_gpio_direction_output(NULL, CONFIG_LCM_GPIO_RSTN, 0);
+		mdelay(5);
+	}
+
+	return 0;
+}
+#endif
+
+int sprd_panel_probe(void)
+{
+	struct panel_info *info;
+	struct panel_ops *ops;
+	//int i = 0;
+	uint32_t id;	
+	uint16_t sec_id = SEC_LCD0;
+	uint16_t ret = 0;
+	boot_mode_t boot_role;
+	chipram_env_t* cr_env = get_chipram_env();
+	boot_role = cr_env->mode;
+	if(boot_role == BOOTLOADER_MODE_DOWNLOAD)
+	{
+		printf("%s: download mode\r\n");
+		return NULL;
+	}
+	g_sc9850_udc_lcd = udc_lcd_create(SEC_LCD0, &lcd_panel[0]); 
+
+	while(1)
+	{        
+		ret = udc_lcd_config_panel(g_sc9850_udc_lcd, sec_id++);
+		
+		panel_drv = lcd_panel[0].drv;
+		info = panel_drv->info;
+		ops = panel_drv->ops;
+		
+		
+////////////////read id start/////////////////////////////////////////////		
+		panel_if_init();
+
+		if (ops && ops->power)
+			ops->power(true);
+  		//panel_reset(true);
+		if(!ret)//not find lcd then config the last lcd to panle
+		{
+		  id = 0xffff;
+		  break;
+		}
+		else
+		{
+		  id = ops->read_id();
+		}
+
+		if(id == lcd_panel[0].lcd_id) 
+		{
+		 break;
+	 	}
+		//panel_reset(false);
+		if (ops && ops->power)
+			ops->power(false);
+
+		panel_if_uinit();
+
+		pr_err("attach panel 0x%x failed, try next...\n",
+			lcd_panel[0].lcd_id);
+	}
+
+	if (ops && ops->init)
+		ops->init();
+
+	panel_info.vl_row = info->height;
+	panel_info.vl_col = info->width;
+	lcd_id_to_kernel = lcd_panel[0].lcd_id;///supported_panel[i].lcd_id    add by jinq for script modify
+	
+//ave_lcd_id_to_kernel(lcd_panel[0].lcd_id);
+//ave_lcd_size_to_kernel(info->height, info->width);
+
+	return 0;
+}
+#else
 int sprd_panel_probe(void)
 {
 	struct panel_info *info;
@@ -135,7 +226,8 @@ int sprd_panel_probe(void)
 			ops->power(true);
 		if (ops && ops->read_id) {
 			ret = ops->read_id();
-			if (!ret) {
+			if(ret > 0) {   //add by jinq for script modify
+			//if (!ret) {
 				pr_info("attach panel 0x%x success\n",
 					supported_panel[i].lcd_id);
 				break;
@@ -155,7 +247,11 @@ int sprd_panel_probe(void)
 
 	panel_info.vl_row = info->height;
 	panel_info.vl_col = info->width;
-	lcd_id_to_kernel = supported_panel[i].lcd_id;
+	lcd_id_to_kernel = ret;///supported_panel[i].lcd_id    add by jinq for script modify
 
 	return 0;
 }
+
+#endif
+	
+

@@ -52,6 +52,16 @@ unsigned char board_key_scan(void)
 
 unsigned int check_key_boot(unsigned char key)
 {
+#ifdef ZCFG_SWAP_RECOVERY_FACTORY
+    if(KEY_VOLUMEUP == key)
+      return CMD_RECOVERY_MODE;
+    else if(KEY_HOME == key)
+      return CMD_FASTBOOT_MODE;
+    else if(KEY_VOLUMEDOWN== key)
+      return CMD_FACTORYTEST_MODE;
+    else
+      return 0;
+#else
     if(KEY_VOLUMEUP == key)
       return CMD_FACTORYTEST_MODE;
     else if(KEY_HOME == key)
@@ -60,5 +70,6 @@ unsigned int check_key_boot(unsigned char key)
       return CMD_RECOVERY_MODE;
     else
       return 0;
+#endif
 }
 

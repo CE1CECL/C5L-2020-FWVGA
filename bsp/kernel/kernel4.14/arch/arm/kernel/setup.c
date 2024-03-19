@@ -66,6 +66,11 @@
 
 #include "atags.h"
 
+#ifdef CONFIG_UDC
+#include <linux/udc.h>
+#endif
+
+
 
 #if defined(CONFIG_FPE_NWFPE) || defined(CONFIG_FPE_FASTFPE)
 char fpe_type[8];
@@ -932,6 +937,14 @@ static int __init customize_machine(void)
 	 */
 	if (machine_desc->init_machine)
 		machine_desc->init_machine();
+#ifdef CONFIG_UDC 
+
+			udc_create( );
+#endif
+		
+#ifdef CONFIG_UDC_GPIO	  
+			udc_gpio_init();
+#endif
 
 	return 0;
 }

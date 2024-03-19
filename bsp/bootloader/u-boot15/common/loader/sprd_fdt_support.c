@@ -903,6 +903,30 @@ int fdt_fixup_lcdbase(void *fdt)
 	return ret;
 }
 
+#ifdef  CONFIG_UDC
+extern unsigned short	* udc_buffer;
+extern unsigned long int			 udc_length;
+int fdt_fixup_udc_cmdline(void *fdt)
+{
+	char buf[128];
+	int str_len;
+	int ret;
+	char *boot_mode;
+
+	memset(buf, 0, 128);
+
+	#ifdef CONFIG_UDC_LCD
+	sprintf(buf, " udc=0x%x, 0x%x, 0x%x ", (long) udc_buffer,  udc_length, udc_get_lcd_offset());
+	#else
+	//sprintf(buf, " udc=0x%x, 0x%x ", (long) udc->buffer,  udc->length);
+	sprintf(buf, " udc=0x%x, 0x%x ", (long) udc_buffer,  udc_length);
+	#endif
+	   
+	str_len = strlen(buf);
+	ret = fdt_chosen_bootargs_append(fdt, buf, 1);
+	return ret;
+} 
+#endif
 int fdt_fixup_lcdsize(void *fdt)
 {
 	char buf[32];

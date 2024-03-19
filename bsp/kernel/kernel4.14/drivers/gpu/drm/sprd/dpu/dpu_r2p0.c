@@ -39,6 +39,8 @@
 
 #define SLP_BRIGHTNESS_THRESHOLD 0x20
 
+#define ZCFG_DUP_ENHANCE_PQ
+
 struct layer_reg {
 	u32 addr[4];
 	u32 ctrl;
@@ -1229,6 +1231,7 @@ static void disable_vsync(struct dpu_context *ctx)
 
 	reg->dpu_int_en &= ~DISPC_INT_DPI_VSYNC_MASK;
 }
+#if defined(ZCFG_DUP_ENHANCE_PQ)
 
 static void dpu_enhance_backup(u32 id, void *param)
 {
@@ -1284,7 +1287,7 @@ static void dpu_enhance_backup(u32 id, void *param)
 		break;
 	}
 }
-
+#endif
 static void dpu_epf_set(struct dpu_reg *reg, struct epf_cfg *epf)
 {
 	reg->epf_epsilon = (epf->epsilon1 << 16) | epf->epsilon0;
@@ -1294,9 +1297,10 @@ static void dpu_epf_set(struct dpu_reg *reg, struct epf_cfg *epf)
 			   (epf->gain5 << 8) | epf->gain4;
 	reg->epf_diff = (epf->max_diff << 8) | epf->min_diff;
 }
-
+//#define ZCFG_DUP_ENHANCE_PQ
 static void dpu_enhance_set(struct dpu_context *ctx, u32 id, void *param)
 {
+#if defined(ZCFG_DUP_ENHANCE_PQ)
 	struct dpu_reg *reg = (struct dpu_reg *)ctx->base;
 	struct scale_cfg *scale;
 	struct cm_cfg *cm;
@@ -1414,6 +1418,7 @@ static void dpu_enhance_set(struct dpu_context *ctx, u32 id, void *param)
 	}
 
 	enhance_en = reg->dpu_enhance_cfg;
+#endif
 }
 
 static void dpu_enhance_get(struct dpu_context *ctx, u32 id, void *param)

@@ -23,6 +23,7 @@
  * Every display_timing can be specified with either just the typical value or
  * a range consisting of min/typ/max. This function helps handling this
  **/
+ #ifndef CONFIG_UDC
 static int parse_timing_property(const struct device_node *np, const char *name,
 			  struct timing_entry *result)
 {
@@ -49,11 +50,15 @@ static int parse_timing_property(const struct device_node *np, const char *name,
 
 	return ret;
 }
-
+#endif
 /**
  * of_parse_display_timing - parse display_timing entry from device_node
  * @np: device_node with the properties
  **/
+	
+#ifdef CONFIG_UDC
+extern int udc_get_display_timing(int num,struct display_timing *dt);
+#endif
 static int of_parse_display_timing(const struct device_node *np,
 		struct display_timing *dt)
 {
@@ -61,7 +66,20 @@ static int of_parse_display_timing(const struct device_node *np,
 	int ret = 0;
 
 	memset(dt, 0, sizeof(*dt));
+	
+	#ifdef CONFIG_UDC
+	//printk("jinq******udc********name=%s, full_name=%s\n",np->name,np->full_name);
+	if(strcmp("timing0",np->name))
+	{
+	
+		ret=udc_get_display_timing(0,dt);
+	}
+	else
+	{
+		ret=udc_get_display_timing(1,dt);
 
+	}
+	#else
 	ret |= parse_timing_property(np, "hback-porch", &dt->hback_porch);
 	ret |= parse_timing_property(np, "hfront-porch", &dt->hfront_porch);
 	ret |= parse_timing_property(np, "hactive", &dt->hactive);
@@ -71,7 +89,7 @@ static int of_parse_display_timing(const struct device_node *np,
 	ret |= parse_timing_property(np, "vactive", &dt->vactive);
 	ret |= parse_timing_property(np, "vsync-len", &dt->vsync_len);
 	ret |= parse_timing_property(np, "clock-frequency", &dt->pixelclock);
-
+	#endif
 	dt->flags = 0;
 	if (!of_property_read_u32(np, "vsync-active", &val))
 		dt->flags |= val ? DISPLAY_FLAGS_VSYNC_HIGH :
@@ -169,6 +187,7 @@ struct display_timings *of_get_display_timings(const struct device_node *np)
 		pr_err("%pOF: no timing specifications given\n", np);
 		goto entryfail;
 	}
+
 
 	pr_debug("%pOF: using %s as default timing\n", np, entry->name);
 

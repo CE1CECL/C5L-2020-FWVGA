@@ -2814,6 +2814,26 @@ ulong emmc_query_backstage(char part_num, uint32_t num, uint8_t *buf)
 
 	return ret;
 }
+#ifdef CONFIG_UDC_LCD
+int Emmc_Read(char  part_num, lbaint_t startBlock,lbaint_t  num,uint8_t* buf)
+{
+	struct mmc *mmc = find_mmc_device(EMMC);
+	int ret = 0;
+	if (!mmc)
+		return 0;
+	if(mmc->part_num != part_num)
+		mmc_switch_part(EMMC, part_num);
+
+	mmc->part_num = part_num;
+	debugf("Emmc_Read partnum=%d,startBlock="LBAF",num=%d,buf=%p\n",part_num,startBlock,num,buf);
+	ret = mmc_bread(EMMC,startBlock,num,buf);
+	if(part_num){
+		mmc->part_num = 0;
+		mmc_switch_part(EMMC, 0);
+	 }
+	return ret;
+}
+#endif
 
 u64 emmc_get_capacity(char part_num)
 {

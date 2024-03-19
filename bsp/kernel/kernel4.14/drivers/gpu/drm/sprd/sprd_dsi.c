@@ -290,14 +290,19 @@ static int sprd_dsi_phy_attach(struct sprd_dsi *dsi)
 
 	return 0;
 }
-
+#ifdef CONFIG_UDC
+extern void udc_get_phy_bit_clk(struct sprd_dsi *dsi);
+extern void udc_get_phy_escape_clk(struct sprd_dsi *dsi);
+#endif
 static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 			   struct mipi_dsi_device *slave)
 {
 	struct sprd_dsi *dsi = host_to_dsi(host);
 	struct dsi_context *ctx = &dsi->ctx;
 	struct device_node *lcd_node;
+	#ifndef CONFIG_UDC
 	u32 val;
+	#endif
 	int ret;
 
 	DRM_INFO("%s()\n", __func__);
@@ -330,7 +335,10 @@ static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 		return ret;
 
 	lcd_node = dsi->panel->dev->of_node;
-
+#ifdef CONFIG_UDC
+	udc_get_phy_bit_clk(dsi);
+	udc_get_phy_escape_clk(dsi);
+#else
 	ret = of_property_read_u32(lcd_node, "sprd,phy-bit-clock", &val);
 	if (!ret) {
 		dsi->phy->ctx.freq = val;
@@ -345,7 +353,7 @@ static int sprd_dsi_host_attach(struct mipi_dsi_host *host,
 		ctx->esc_clk = val > 20000 ? 20000 : val;
 	else
 		ctx->esc_clk = 20000;
-
+#endif
 	return 0;
 }
 

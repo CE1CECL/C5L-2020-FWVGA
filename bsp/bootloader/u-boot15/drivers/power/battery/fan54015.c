@@ -2,15 +2,25 @@
 #include "sprd_chg_helper.h"
 
 /******************************************************************************
+* charge en status
+******************************************************************************/
+#if defined(ZCFG_MK_CHAR_EN_USE_GPIO)
+	#define ENABLE_CHARGE 0
+	#define DISENABLE_CHARGE 1
+	#define CHAR_EN_GPIO 32
+#endif
+
+/******************************************************************************
 * Register addresses
 ******************************************************************************/
 #define FAN5405_REG_CONTROL0	              0
 #define FAN5405_REG_CONTROL1	              1
-#define FAN5405_REG_OREG	              2
+#define FAN5405_REG_OREG	              	  2
 #define FAN5405_REG_IC_INFO                   3
-#define FAN5405_REG_IBAT	              4
+#define FAN5405_REG_IBAT	                  4
 #define FAN5405_REG_SP_CHARGER                5
 #define FAN5405_REG_SAFETY                    6
+#define ETA6937_REG_IINLIM        			  7
 #define FAN5405_REG_MONITOR                  16
 
 /******************************************************************************
@@ -53,8 +63,8 @@
 /* FAN5405_REG_IC_INFO (0x03) */
 #define FAN5405_REV                     (0x03)
 #define FAN5405_REV_SHIFT                    0
-#define FAN5405_PN                 (0x07 << 2)
-#define FAN5405_PN_SHIFT                     2
+#define FAN5405_PN                 (0x1f << 0)
+#define FAN5405_PN_SHIFT                     0
 #define FAN5405_VENDOR_CODE        (0x07 << 5)
 #define FAN5405_VENDOR_CODE_SHIFT            5
 
@@ -77,12 +87,23 @@
 #define FAN5405_IO_LEVEL_SHIFT               5
 #define FAN5405_DIS_VREG           (0x01 << 6)
 #define FAN5405_DIS_VREG_SHIFT               6
+#define ETA6937_IOCHARGE           (0x03 << 6)
+#define ETA6937_IOCHARGE_SHIFT               6
 
 /* FAN5405_REG_SAFETY (0x06) */
 #define FAN5405_VSAFE                   (0x0f)
 #define FAN5405_VSAFE_SHIFT                  0
 #define FAN5405_ISAFE              (0x07 << 4)
 #define FAN5405_ISAFE_SHIFT                  4
+
+/*ETA6937_REG_IINLIM        (0x7)*/
+
+#define ETA6937_IINLIMEN            (0x01<< 3)
+#define ETA6937_IINLIMEN_SHIFT							3
+#define ETA6937_IINLIM              (0x07<< 0)
+#define ETA6937_IINLIM_SHIFT							  0  
+#define IINLIM2000 5
+
 
 /* FAN5405_REG_MONITOR (0x10) */
 #define FAN5405_CV                      (0x01)
@@ -145,6 +166,9 @@
 #define OTGACTIVEHIGH 1
 // OREG [7:2]
 #define VOREG4P2 35  // refer to table 3
+#define VOREG4P4 45  // refer to table 3
+
+
 /********** FAN5405_REG_IC_INFO (0x03) **********/
 
 /********** FAN5405_REG_IBAT (0x04) **********/
@@ -206,17 +230,27 @@
 #define ISAFE850 3
 #define ISAFE1050 4
 #define ISAFE1150 5
-#define ISAFE1350 6
-#define ISAFE1450 7
+#define ISAFE1350 6 
+#define ISAFE1450 7 //1.45A
+
+//for ETA6937
+#define ISAFE1950 7  //1.95A
+
 
 #define I2C_SPEED			(100000)
 #define SLAVE_ADDR 		(0x6a)
 
+#define VENDOR_PSC54X5X					(0x7)
 #define VENDOR_FAN54015					(0x4)
-#define VENDOR_TQ24157					(0x2)
-#define VENDOR_PSC5415Z					(0x7)
+#define VENDOR_ETA6937					(0x2)
 
-unsigned char fan54015_get_vendor_id(void);
+
+//For VENDOR_PSC54X5X start
+#define VENDOR_ID2_PSC5425E                  (0x10)
+#define VENDOR_ID2_PSC5415A					(0x15)
+#define VENDOR_ID2_PSC5425A					(0x16)
+//For VENDOR_PSC54X5X end
+#define VENDOR_ID2_SY6923D1					(0x11)
 
 uint16_t sprd_fan54015_i2c_init(void)
 {
@@ -287,48 +321,29 @@ void fan54015_ta_start_charging(void)
 
 void sprdchg_fan54015_start_chg(int type)
 {
+	printf("start charge_uboot\n");
+#if defined(ZCFG_MK_CHAR_EN_USE_GPIO)
+	sprd_gpio_request(NULL,CHAR_EN_GPIO);
+	sprd_gpio_direction_output(NULL,CHAR_EN_GPIO, ENABLE_CHARGE);
+#else
 	sprd_charge_pd_control(true);
+#endif
 }
  void sprdchg_fan54015_stop_charging(int value)
 {
-	printf("stop charge\n");
+	printf("stop charge_uboot\n");
+	#if defined(ZCFG_MK_CHAR_EN_USE_GPIO)
+		sprd_gpio_request(NULL,CHAR_EN_GPIO);
+		sprd_gpio_direction_output(NULL,CHAR_EN_GPIO, DISENABLE_CHARGE);
+	#else
 	sprd_charge_pd_control(false);
+	#endif
 }
 void  fan54015_sw_reset(void)
 {
 	printf("fan54015_sw_reset\n");
 	fan54015_set_value(FAN5405_REG_IBAT, FAN5405_RESET, FAN5405_RESET_SHIFT, 1);
 }
-void sprdchg_fan54015_ic_init(void)
-{
-	unsigned char vendor_id;
-	vendor_id = fan54015_get_vendor_id();
-	sprd_fan54015_i2c_init();
-	//reg 6
-	fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_VSAFE,FAN5405_VSAFE_SHIFT, VSAFE4P38);  // VSAFE = 4.38V
-	fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_ISAFE, FAN5405_ISAFE_SHIFT, ISAFE1450);	// ISAFE = 1450mA (68mOhm)
-	fan54015_sw_reset();
-
-	if(vendor_id == VENDOR_PSC5415Z)
-	{
-	fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_VSAFE,FAN5405_VSAFE_SHIFT, VSAFE4P38);  // VSAFE = 4.38V
-	fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_ISAFE, FAN5405_ISAFE_SHIFT, ISAFE1450);	// ISAFE = 1450mA (68mOhm)
-	}
-	//reg 1
-	fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_VLOWV, FAN5405_VLOWV_SHIFT,VLOWV3P4);	// VLOWV = 3.4V
-	fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_IINLIM, FAN5405_IINLIM_SHIFT,NOLIMIT);  // INLIM = 500mA
-	//reg 2
-	fan54015_set_value(FAN5405_REG_OREG, FAN5405_OREG,FAN5405_OREG_SHIFT, VOREG4P2);  //OREG = 4.35V
-	//reg 5
-	fan54015_set_value(FAN5405_REG_SP_CHARGER, FAN5405_IO_LEVEL,FAN5405_IO_LEVEL_SHIFT, ENIOLEVEL);  //IO_LEVEL is 0. Output current is controlled by IOCHARGE bits.
-}
-
-void sprdchg_fan54015_reset_timer(void)
-{
-	printf("fan 54015 reset rimer\n");
-	fan54015_set_value(FAN5405_REG_CONTROL0, FAN5405_TMR_RST_OTG,FAN5405_TMR_RST_OTG_SHIFT, RESET32S);
-}
-
 unsigned char fan54015_get_vendor_id(void)
 {
 	return fan54015_get_value(FAN5405_REG_IC_INFO,
@@ -336,7 +351,108 @@ unsigned char fan54015_get_vendor_id(void)
 				  FAN5405_VENDOR_CODE_SHIFT);
 }
 
+unsigned char fan54015_get_vendor_id2(void)
+{
+	return fan54015_get_value(FAN5405_REG_IC_INFO,FAN5405_PN,FAN5405_PN_SHIFT);
+}
+
+void sprdchg_fan54015_ic_init(void)
+{
+
+	unsigned char vendor_id = 0, vendor_id2 = 0;
+
+	
+	vendor_id = fan54015_get_vendor_id();
+	vendor_id2 = fan54015_get_vendor_id2();
+	
+	if((vendor_id == VENDOR_ETA6937)&&(vendor_id2==VENDOR_ID2_SY6923D1))
+	{
+		vendor_id = VENDOR_FAN54015;
+	}
+
+    if(vendor_id == VENDOR_ETA6937)
+    {
+		sprd_fan54015_i2c_init();
+
+		fan54015_sw_reset();
+		//reg 6	
+		fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_VSAFE,FAN5405_VSAFE_SHIFT, VSAFE4P44);  // VSAFE4P44 = 4.44V
+		fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_ISAFE, FAN5405_ISAFE_SHIFT, ISAFE1950);	// ISAFE = 195mA (68mOhm)
+		//reg 1
+		fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_VLOWV, FAN5405_VLOWV_SHIFT,VLOWV3P4);	// VLOWV = 3.4V
+		fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_IINLIM, FAN5405_IINLIM_SHIFT,NOLIMIT);  // No Input CurrentLimit
+		//reg 2
+		fan54015_set_value(FAN5405_REG_OREG, FAN5405_OREG,FAN5405_OREG_SHIFT, VOREG4P4);  //OREG = 4.4V
+		//reg 5
+		fan54015_set_value(FAN5405_REG_SP_CHARGER, FAN5405_IO_LEVEL,FAN5405_IO_LEVEL_SHIFT, ENIOLEVEL);  //IO_LEVEL is 0. Output current is controlled by IOCHARGE bits.
+		fan54015_usb_start_charging();
+
+	}
+	else
+	{
+		sprd_fan54015_i2c_init();
+		//reg 6
+		fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_VSAFE,FAN5405_VSAFE_SHIFT, VSAFE4P38);  // VSAFE = 4.38V
+		fan54015_set_value(FAN5405_REG_SAFETY, FAN5405_ISAFE, FAN5405_ISAFE_SHIFT, ISAFE1450);	// ISAFE = 1450mA (68mOhm)
+		fan54015_sw_reset();
+		//reg 1
+		fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_VLOWV, FAN5405_VLOWV_SHIFT,VLOWV3P4);	// VLOWV = 3.4V
+		fan54015_set_value(FAN5405_REG_CONTROL1, FAN5405_IINLIM, FAN5405_IINLIM_SHIFT,NOLIMIT);  // INLIM = 500mA
+		//reg 2
+		fan54015_set_value(FAN5405_REG_OREG, FAN5405_OREG,FAN5405_OREG_SHIFT, VOREG4P2);  //OREG = 4.35V
+		//reg 5
+		fan54015_set_value(FAN5405_REG_SP_CHARGER, FAN5405_IO_LEVEL,FAN5405_IO_LEVEL_SHIFT, ENIOLEVEL);  //IO_LEVEL is 0. Output current is controlled by IOCHARGE bits.
+	}
+
+}
+void sprdchg_fan54015_reset_timer(void)
+{
+	printf("fan 54015 reset rimer\n");
+	fan54015_set_value(FAN5405_REG_CONTROL0, FAN5405_TMR_RST_OTG,FAN5405_TMR_RST_OTG_SHIFT, RESET32S);
+}
+
 void fan54015_set_chg_current(unsigned char reg_val)
+{
+	unsigned char vendor_id = 0, vendor_id2 = 0;
+	
+	vendor_id = fan54015_get_vendor_id();
+	vendor_id2 = fan54015_get_vendor_id2();
+	
+	if((vendor_id == VENDOR_ETA6937)&&(vendor_id2==VENDOR_ID2_SY6923D1))
+	{
+		vendor_id = VENDOR_FAN54015;
+	}
+
+	if(vendor_id == VENDOR_ETA6937)
+	{
+		if (reg_val == 0)
+		{
+			fan54015_set_value(FAN5405_REG_CONTROL1,
+				   FAN5405_IINLIM, FAN5405_IINLIM_SHIFT,
+				   IINLIM500);
+			fan54015_set_value(ETA6937_REG_IINLIM,
+				   ETA6937_IINLIMEN, ETA6937_IINLIMEN_SHIFT,
+				   0);
+		}
+		else
+		{
+		
+			fan54015_set_value(FAN5405_REG_CONTROL1,
+				   FAN5405_IINLIM, FAN5405_IINLIM_SHIFT,
+				   NOLIMIT);
+			fan54015_set_value(ETA6937_REG_IINLIM,
+				   ETA6937_IINLIMEN, ETA6937_IINLIMEN_SHIFT,
+				   1);
+			fan54015_set_value(ETA6937_REG_IINLIM,
+				   ETA6937_IINLIM, ETA6937_IINLIM_SHIFT,
+				   IINLIM2000);
+			fan54015_set_value(FAN5405_REG_IBAT, FAN5405_IOCHARGE,
+			   	FAN5405_IOCHARGE_SHIFT, (reg_val%8));
+			fan54015_set_value(FAN5405_REG_SP_CHARGER, ETA6937_IOCHARGE,
+			   	ETA6937_IOCHARGE_SHIFT, (reg_val/8));
+		}
+	}
+	else
 {
 	if (reg_val == 0)
 		fan54015_set_value(FAN5405_REG_CONTROL1,
@@ -350,6 +466,7 @@ void fan54015_set_chg_current(unsigned char reg_val)
 			   FAN5405_IOCHARGE_SHIFT, reg_val);
 }
 
+}
 unsigned char sprdchg_fan54015_cur2reg(uint32_t cur)
 {
 	unsigned char reg_val;
@@ -373,55 +490,135 @@ unsigned char sprdchg_fan54015_cur2reg(uint32_t cur)
 	return reg_val;
 }
 
-unsigned char sprdchg_tq24157_cur2reg(uint32_t cur)
+unsigned char sprdchg_eta6937_cur2reg(uint32_t cur)
+{
+	unsigned char reg_val;
+
+	if(cur <= 550){
+		reg_val = 0;
+	}
+	else if(cur >= 2000){
+		reg_val = 15;
+	}
+	else{
+		reg_val = (cur - 550) / 100;
+	}
+	
+	return reg_val;
+
+
+}
+
+unsigned char  sprdchg_psc5415a_cur2reg(uint32_t cur)
 {
 	unsigned char reg_val;
 
 	if (cur < 650)
 		reg_val = 0;
-	else if (cur >= 1250)
+	if ((cur >= 650) && (cur < 800))
+		reg_val = 1;
+	if ((cur >= 800) && (cur < 950))
+		reg_val = 2;
+	if ((cur >= 950) && (cur < 1100))
+		reg_val = 3;
+	if ((cur >= 1100) && (cur < 1200))
+		reg_val = 4;
+	if ((cur >= 1200) && (cur < 1400))
+		reg_val = 5;
+	if ((cur >= 1400) && (cur < 1550))
+		reg_val = 6;
+	if (cur >= 1550)
 		reg_val = 7;
-	else
-		reg_val = (cur - 550) / 100;
-
 	return reg_val;
 }
 
-unsigned char sprdchg_psc5415z_cur2reg(uint32_t cur)
+unsigned char sprdchg_psc5425a_cur2reg(uint32_t cur)
 {
 	unsigned char reg_val;
-	if (cur < 821)
-		reg_val = 0;
-	if ((cur >= 821) && (cur < 1027))
+
+	if (cur < 650)
+		reg_val = 0; 
+	if ((cur >= 650) && (cur < 900))
 		reg_val = 1;
-	if ((cur >= 1027) && (cur < 1230))
+	if ((cur >= 900) && (cur < 1100))
 		reg_val = 2;
-	if ((cur >= 1230) && (cur < 1436))
+	if ((cur >= 1100) && (cur < 1300))
 		reg_val = 3;
-	if ((cur >= 1436) && (cur <1642))
+	if ((cur >= 1300) && (cur < 1500))
 		reg_val = 4;
-	if ((cur >= 1642) && (cur < 1848))
+	if ((cur >= 1500) && (cur < 1700))
 		reg_val = 5;
-	if ((cur >= 1848) && (cur < 2052))
+	if ((cur >= 1700) && (cur < 1950))
 		reg_val = 6;
-	if (cur >=2052)
+	if (cur >= 1950)
 		reg_val = 7;
 	return reg_val;
 }
+
+unsigned char sprdchg_psc5425e_cur2reg(uint32_t cur)
+{
+	unsigned char reg_val;
+
+	if (cur < 680)
+		reg_val = 0; 
+	if ((cur >= 680) && (cur < 900))
+		reg_val = 1;
+	if ((cur >= 900) && (cur < 1150))
+		reg_val = 2;
+	if ((cur >= 1150) && (cur < 1300))
+		reg_val = 3;
+	if ((cur >= 1300) && (cur < 1550))
+		reg_val = 4;
+	if ((cur >= 1550) && (cur < 1750))
+		reg_val = 5;
+	if ((cur >= 1750) && (cur < 1950))
+		reg_val = 6;
+	if (cur >= 1950)
+		reg_val = 7;
+	return reg_val;
+}
+
+
 void sprdchg_fan54015_set_cur(uint32_t cur)
 {
-	unsigned char reg_val = 0, vendor_id = VENDOR_FAN54015;
+	unsigned char reg_val = 0, vendor_id = VENDOR_FAN54015,vendor_id2 = VENDOR_ID2_PSC5415A;
 
 
 	vendor_id = fan54015_get_vendor_id();
+	vendor_id2 = fan54015_get_vendor_id2();
+	
+	if((vendor_id == VENDOR_ETA6937)&&(vendor_id2==VENDOR_ID2_SY6923D1))
+	{
+		vendor_id = VENDOR_FAN54015;
+	}
+
 	if (vendor_id == VENDOR_FAN54015)
+	{
 		reg_val = sprdchg_fan54015_cur2reg(cur);
+	}
 
-	if (vendor_id == VENDOR_TQ24157)
-		reg_val = sprdchg_tq24157_cur2reg(cur);
+	if (vendor_id == VENDOR_ETA6937)
+	{
+		reg_val = sprdchg_eta6937_cur2reg(cur);
+	}
 
-	if (vendor_id == VENDOR_PSC5415Z)
-		reg_val = sprdchg_psc5415z_cur2reg(cur);
+	if (vendor_id == VENDOR_PSC54X5X)
+	{
+		if(vendor_id2 == VENDOR_ID2_PSC5425A)
+		{
+			reg_val = sprdchg_psc5425a_cur2reg(cur);
+		}
+		else if(vendor_id2 == VENDOR_ID2_PSC5425E)
+		{
+			reg_val = sprdchg_psc5425e_cur2reg(cur);
+		}
+		else//PSC5415A
+		{
+			reg_val = sprdchg_psc5415a_cur2reg(cur);
+		}
+		
+	}
+		
 
 	fan54015_set_chg_current(reg_val);
 }
@@ -458,13 +655,14 @@ void sprdchg_fan54015_init(void)
 	sprd_fan54015_i2c_init();
 
 	vendor_id = fan54015_get_vendor_id();
+	printf("[sprdchg_fan54015_init]:vendor_id = %d\n",vendor_id);
+	
 	if (vendor_id == 0x0) {
 		vendor_id = fan54015_get_vendor_id();
 	}
 	if ((vendor_id != VENDOR_FAN54015)
-	    && (vendor_id != VENDOR_TQ24157)
-	    && (vendor_id != VENDOR_PSC5415Z)) {
-		printf("fan54015 is not found,not register ops!!!\n");
+	    && (vendor_id != VENDOR_ETA6937)&& (vendor_id != VENDOR_PSC54X5X)) {
+		printf("fan54015 is not found,not register ops!!! vendor_id=%d\n",vendor_id);
 		return;
 	}
 	printf("fan54015 register charge ops!\n");

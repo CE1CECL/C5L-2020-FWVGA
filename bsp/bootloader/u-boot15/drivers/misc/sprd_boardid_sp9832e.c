@@ -28,12 +28,12 @@ static const struct clock_table clock_table[] = {
 };
 
 static const int adc2deltanv_table[] = {
-	-1, /* reserved */
-	-1, /* reserved */
-	-1, /* reserved */
-	-1, /* reserved */
-	-1, /* reserved */
-	-1, /* reserved */
+	7, /* reserved */
+	6, /* reserved */
+	5, /* reserved */
+	4, /* reserved */
+	3, /* reserved */
+	2, /* reserved */
 	1, /* hw_ver01.nv */
 	0 /* hw_ver00.nv */
 };
@@ -105,9 +105,13 @@ static int get_adc_value_board(int channel)
 static int get_clockid(void)
 {
 	unsigned int gpio_val = 0;
-
+	#if defined(ZCFG_TSX_32KLESS)
+	gpio_val =0;
+	#else
 	gpio_val = gpio_state(LB_GPIO);
-
+	#error "At present, we only support TSX solution"
+	#endif
+	
 	return gpio_val;
 }
 

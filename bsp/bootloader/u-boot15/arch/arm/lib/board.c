@@ -46,6 +46,10 @@
 #include <miiphy.h>
 #endif
 
+#ifdef CONFIG_UDC
+#include <udc.h>
+#include <chipram_env.h>
+#endif
 DECLARE_GLOBAL_DATA_PTR;
 
 ulong monitor_flash_len;
@@ -691,6 +695,28 @@ void board_init_r(gd_t *id, ulong dest_addr)
 		env_relocate();
 	else
 		set_default_env(NULL);
+
+#ifdef CONFIG_UDC
+        boot_mode_t boot_role;
+        chipram_env_t* cr_env = get_chipram_env();
+        boot_role = cr_env->mode;
+        if(boot_role == BOOTLOADER_MODE_DOWNLOAD)
+        {
+                printf("%s: download mode\r\n");
+        }
+        else
+               udc_create( (char*)UDC_MEM_ADDR );
+	
+#ifdef CONFIG_UDC_PINMAP	
+        if(boot_role == BOOTLOADER_MODE_DOWNLOAD)
+        {
+                printf("%s: download mode\r\n");
+        }
+        else
+	        udc_pinmap_create(SEC_PINMAP);
+#endif
+
+#endif
 
 #if defined(CONFIG_CMD_PCI) || defined(CONFIG_PCI)
 	arm_pci_init();

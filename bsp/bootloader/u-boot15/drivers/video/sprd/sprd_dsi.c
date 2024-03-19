@@ -13,6 +13,7 @@
 
 #include "sprd_dsi.h"
 #include "dsi/mipi_dsi_api.h"
+#include "soc/sprd/board.h"
 
 #define MAX_TIME_HS2LP       120 /* unit: ns */
 #define MAX_TIME_LP2HS       500 /* unit: ns */
@@ -155,7 +156,11 @@ static int dsi_context_init(struct sprd_dsi *dsi)
 		dsi->glb->parse_dt(&dsi->ctx);
 
 	ctx->id = 0;
+#ifdef ZCFG_DSI_RDTIME
+	ctx->max_rd_time = ZCFG_DSI_RDTIME;
+#else
 	ctx->max_rd_time = 6000;
+#endif
 	ctx->int0_mask = 0xffffffff;
 	ctx->int1_mask = 0xffffffff;
 

@@ -15,6 +15,7 @@
 #include <linux/irq.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/iio/consumer.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/device.h>
@@ -44,7 +45,15 @@ struct sprd_hsphy {
 	atomic_t		reset;
 	atomic_t		inited;
 	bool			is_host;
+	struct iio_channel	*dp;
+	struct iio_channel	*dm;
 };
+
+#define SC2721_CHARGE_DET_FGU_CTRL	0xecc
+#define BIT_DP_DM_AUX_EN		BIT(1)
+#define BIT_DP_DM_BC_ENB		BIT(0)
+
+extern int sc27xx_adc_verf_cfg(int vol);
 
 static inline void sprd_hsphy_reset_core(struct sprd_hsphy *phy)
 {
@@ -162,13 +171,13 @@ static int sprd_hsphy_init(struct usb_phy *x)
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_APB_EB2,
 		MASK_AON_APB_OTG_REF_EB, MASK_AON_APB_OTG_REF_EB);
 
-	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
-		MASK_AON_APB_USB_ISO_SW_EN, 0);
 
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
 		MASK_AON_APB_USB_PHY_PD_L, 0);
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
 		MASK_AON_APB_USB_PHY_PD_S, 0);
+	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
+		MASK_AON_APB_USB_ISO_SW_EN, 0);
 
 	/* usb vbus valid */
 	value = readl_relaxed(phy->base + REG_AP_AHB_OTG_PHY_TEST);
@@ -222,12 +231,13 @@ static void sprd_hsphy_shutdown(struct usb_phy *x)
 		REG_ANLG_PHY_G4_ANALOG_USB20_USB20_UTMI_CTL1, msk, 0);
 
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
+		MASK_AON_APB_USB_ISO_SW_EN, MASK_AON_APB_USB_ISO_SW_EN);
+	usleep_range(10000, 15000);
+	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
 		MASK_AON_APB_USB_PHY_PD_L, MASK_AON_APB_USB_PHY_PD_L);
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
 		MASK_AON_APB_USB_PHY_PD_S, MASK_AON_APB_USB_PHY_PD_S);
 
-	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_PWR_CTRL,
-		MASK_AON_APB_USB_ISO_SW_EN, MASK_AON_APB_USB_ISO_SW_EN);
 
 	regmap_update_bits(phy->hsphy_glb, REG_AON_APB_APB_EB2,
 		MASK_AON_APB_OTG_REF_EB, 0);
@@ -338,6 +348,48 @@ static enum usb_charger_type sprd_hsphy_charger_detect(struct usb_phy *x)
 	return sc27xx_charger_detect(phy->pmic);
 }
 
+static enum usb_charger_type sprd_hsphy_retry_charger_detect(struct usb_phy *x)
+{
+	struct sprd_hsphy *phy = container_of(x, struct sprd_hsphy, phy);
+	enum usb_charger_type type = UNKNOWN_TYPE;
+	int dm_voltage, dp_voltage;
+	int cnt = 20;
+
+	if (!phy->dm || !phy->dp)
+		return UNKNOWN_TYPE;
+
+	regmap_update_bits(phy->pmic, SC2721_CHARGE_DET_FGU_CTRL,
+			   BIT_DP_DM_AUX_EN | BIT_DP_DM_BC_ENB,
+			   BIT_DP_DM_AUX_EN);
+	msleep(300);
+	sc27xx_adc_verf_cfg(3200);
+	iio_read_channel_processed(phy->dp, &dp_voltage);
+	if (dp_voltage > 1200) {
+		do {
+			iio_read_channel_processed(phy->dm, &dm_voltage);
+			if (dm_voltage > 1200) {
+				type = DCP_TYPE;
+				break;
+			}
+			msleep(100);
+			cnt--;
+			iio_read_channel_processed(phy->dp, &dp_voltage);
+			if (dp_voltage  < 600) {
+				type = SDP_TYPE;
+				break;
+			}
+		} while ((x->chg_state == USB_CHARGER_PRESENT) && cnt > 0);
+	}
+	sc27xx_adc_verf_cfg(2800);
+	regmap_update_bits(phy->pmic, SC2721_CHARGE_DET_FGU_CTRL,
+			   BIT_DP_DM_AUX_EN | BIT_DP_DM_BC_ENB, 0);
+	if (type != UNKNOWN_TYPE) {
+		x->chg_type = type;
+		schedule_work(&x->chg_work);
+	}
+	return type;
+}
+
 static int sprd_hsphy_probe(struct platform_device *pdev)
 {
 	struct device_node *regmap_np;
@@ -427,6 +479,17 @@ static int sprd_hsphy_probe(struct platform_device *pdev)
 		return PTR_ERR(phy->hsphy_glb);
 	}
 
+	phy->dp = devm_iio_channel_get(dev, "dp");
+	phy->dm = devm_iio_channel_get(dev, "dm");
+	if (IS_ERR(phy->dp)) {
+		phy->dp = NULL;
+		dev_warn(dev, "failed to get dp or dm channel\n");
+	}
+	if (IS_ERR(phy->dm)) {
+		phy->dm = NULL;
+		dev_warn(dev, "failed to get dp or dm channel\n");
+	}
+
 	/* enable usb module */
 	regmap_update_bits(phy->apahb, REG_AP_AHB_AHB_EB,
 		MASK_AP_AHB_OTG_EB, MASK_AP_AHB_OTG_EB);
@@ -455,6 +518,7 @@ static int sprd_hsphy_probe(struct platform_device *pdev)
 	phy->phy.type = USB_PHY_TYPE_USB2;
 	phy->phy.vbus_nb.notifier_call = sprd_hsphy_vbus_notify;
 	phy->phy.charger_detect = sprd_hsphy_charger_detect;
+	phy->phy.retry_charger_detect = sprd_hsphy_retry_charger_detect;
 	otg->usb_phy = &phy->phy;
 
 	platform_set_drvdata(pdev, phy);

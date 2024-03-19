@@ -20,6 +20,14 @@
 #include <linux/types.h>
 #include <common.h>
 
+#ifndef false
+#define false 0
+#endif
+#ifndef true
+#define true 1
+#endif
+
+
 #define LCD_DelayMS(ms)  udelay(1000*(ms))
 
 /* LCD mode */

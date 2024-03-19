@@ -26,6 +26,7 @@
 #include "dsi/sprd_dsi_api.h"
 #include "sysfs/sysfs_display.h"
 
+
 #define SPRD_MIPI_DSI_FMT_DSC 0xff
 static DEFINE_MUTEX(panel_lock);
 
@@ -72,6 +73,7 @@ static int sprd_panel_send_cmds(struct mipi_dsi_device *dsi,
 
 	return 0;
 }
+#ifndef CONFIG_UDC
 
 static int sprd_panel_unprepare(struct drm_panel *p)
 {
@@ -269,6 +271,7 @@ static const struct drm_panel_funcs sprd_panel_funcs = {
 	.prepare = sprd_panel_prepare,
 	.unprepare = sprd_panel_unprepare,
 };
+#endif
 
 static int sprd_panel_esd_check(struct sprd_panel *panel)
 {
@@ -412,6 +415,7 @@ static int sprd_panel_gpio_request(struct device *dev,
 
 	return 0;
 }
+#ifndef CONFIG_UDC
 
 static int of_parse_reset_seq(struct device_node *np,
 				struct panel_info *info)
@@ -510,7 +514,7 @@ done:
 
 	return 0;
 }
-
+#endif
 static int of_parse_oled_cmds(struct sprd_oled *oled,
 		const void *data, int size)
 {
@@ -662,6 +666,15 @@ static int sprd_oled_backlight_init(struct sprd_panel *panel)
 
 	return 0;
 }
+/*add by jinq for zyt_info*/
+static char zyt_peripherals_LCD_name[32] = {0};
+char * zyt_get_lcm_info(void)
+{
+	return zyt_peripherals_LCD_name;
+}
+/*add by jinq for zyt_info*/
+
+#ifndef CONFIG_UDC
 
 int sprd_panel_parse_lcddtb(struct device_node *lcd_node,
 	struct sprd_panel *panel)
@@ -800,6 +813,8 @@ int sprd_panel_parse_lcddtb(struct device_node *lcd_node,
 
 	info->mode.vrefresh = drm_mode_vrefresh(&info->mode);
 	of_parse_buildin_modes(info, lcd_node);
+	//add  by jinq
+	strncpy(zyt_peripherals_LCD_name, lcd_name,sizeof(zyt_peripherals_LCD_name)-1);
 
 	return 0;
 }
@@ -827,6 +842,8 @@ static int sprd_panel_parse_dt(struct device_node *np, struct sprd_panel *panel)
 
 	return 0;
 }
+
+#endif
 
 static int sprd_panel_device_create(struct device *parent,
 				    struct sprd_panel *panel)
@@ -878,13 +895,17 @@ static int sprd_panel_probe(struct mipi_dsi_device *slave)
 	}
 
 	INIT_DELAYED_WORK(&panel->esd_work, sprd_panel_esd_work_func);
-
+#ifdef CONFIG_UDC
+	if(udc_lcd_create(SEC_LCD0, panel) ){
+	 strncpy(zyt_peripherals_LCD_name, lcd_name,sizeof(zyt_peripherals_LCD_name)-1);
+	}
+#else
 	ret = sprd_panel_parse_dt(slave->dev.of_node, panel);
 	if (ret) {
 		DRM_ERROR("parse panel info failed\n");
 		return ret;
 	}
-
+#endif
 	ret = sprd_panel_gpio_request(&slave->dev, panel);
 	if (ret) {
 		DRM_WARN("gpio is not ready, panel probe deferred\n");
@@ -904,7 +925,9 @@ static int sprd_panel_probe(struct mipi_dsi_device *slave)
 	}
 
 	panel->base.dev = &panel->dev;
+	#ifndef CONFIG_UDC
 	panel->base.funcs = &sprd_panel_funcs;
+	#endif
 	drm_panel_init(&panel->base);
 
 	ret = drm_panel_add(&panel->base);
@@ -954,10 +977,13 @@ static int sprd_panel_remove(struct mipi_dsi_device *slave)
 	int ret;
 
 	DRM_INFO("%s()\n", __func__);
-
+#ifdef CONFIG_UDC
+	panel->base.funcs->unprepare(&panel->base);
+	panel->base.funcs->disable(&panel->base);
+#else
 	sprd_panel_disable(&panel->base);
 	sprd_panel_unprepare(&panel->base);
-
+#endif
 	ret = mipi_dsi_detach(slave);
 	if (ret < 0)
 		DRM_ERROR("failed to detach from DSI host: %d\n", ret);

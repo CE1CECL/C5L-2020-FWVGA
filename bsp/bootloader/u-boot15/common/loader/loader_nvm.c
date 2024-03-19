@@ -44,6 +44,8 @@ extern void aon_lpc_config();
 #include "dev_tree.h"
 #endif
 
+#include "../../../../kernel/kernel4.14/include/soc/sprd/board.h"
+
 #if (defined CONFIG_SECBOOT) && (defined CONFIG_VBOOT_V2)
 unsigned os_version __attribute__((aligned(4096))); /*must be PAGE ALIGNED*/
 unsigned char root_of_trust_str[ROOT_OF_TRUST_MAXSIZE] __attribute__((aligned(4096)));
@@ -1571,6 +1573,10 @@ void vlx_nand_boot(char *kernel_pname, int backlight_set, int lcd_enable)
 		}
 
 	}
+#endif
+
+#ifdef ZCFG_UBOOT_BACKLIGHT_DELAY_TIME
+	mdelay(ZCFG_UBOOT_BACKLIGHT_DELAY_TIME);
 #endif
 	set_backlight(backlight_set);
 	backlight_on_time = SCI_GetTickCount();

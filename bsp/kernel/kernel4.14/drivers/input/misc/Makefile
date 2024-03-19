@@ -83,3 +83,11 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_XEN_KBDDEV_FRONTEND)	+= xen-kbdfront.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_IDEAPAD_SLIDEBAR)	+= ideapad_slidebar.o
+zyt_ALS_LISTS := $(subst ",,$(CONFIG_ZYT_ALSPS_LIST))
+obj-y += $(foreach item,$(zyt_ALS_LISTS),$(item).o)
+
+zyt_GSENSOR_LISTS := $(subst ",,$(CONFIG_ZYT_GSENSOR_LIST))
+obj-y += $(foreach item,$(zyt_GSENSOR_LISTS),$(item)/)
+
+obj-$(CONFIG_INPUT_LSM6DS3) += lsm6ds3/
+obj-$(CONFIG_INPUT_ST480)  += st480/

@@ -23,6 +23,10 @@
 #include <linux/compat.h>
 #include <linux/types.h>
 #include <lcd.h>
+#ifdef CONFIG_UDC_LCD
+#include <udc.h>
+#include <chipram_env.h>
+#endif
 
 
 #ifndef bool

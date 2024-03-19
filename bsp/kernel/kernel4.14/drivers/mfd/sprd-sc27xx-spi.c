@@ -97,6 +97,9 @@ static const struct mfd_cell sprd_pmic_devs[] = {
 		.name = "sc27xx-flash",
 		.of_compatible = "sprd,sc27xx-flash",
 	}, {
+		.name = "sc27xx-flash-rgb",
+		.of_compatible = "sprd,sc27xx-flash-rgb",
+	}, {
 		.name = "sc27xx-eic",
 		.of_compatible = "sprd,sc27xx-eic",
 	}, {

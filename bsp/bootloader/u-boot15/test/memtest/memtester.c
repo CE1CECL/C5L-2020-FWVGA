@@ -61,9 +61,4 @@ void ddr_memtester(void)
 		ddr_mem_test((sdram_base + RAM256), (ram_size - RAM256), TEST_LEN);
 	}
 	lcd_printf("DDR mem test pass\n");
-	reset_cpu(0);
-	while(1)
-	{
-		i = 1;
-	}
 }

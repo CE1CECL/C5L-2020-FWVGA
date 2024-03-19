@@ -679,6 +679,9 @@ libs-y += drivers/usb/gadget/
 libs-$(CONFIG_DWC_OTG) += drivers/usb/dwc_otg/
 libs-$(CONFIG_USB_DWC3) += drivers/usb/dwc3/
 libs-$(CONFIG_USB_DWC3_GADGET) += drivers/usb/gadget/udc/
+#libs-$(CONFIG_UDC) += drivers/udc/
+#libs-$(CONFIG_UDC_SC9832E) += drivers/udc_sharkle/
+#libs-$(CONFIG_UDC_SC7731E) += drivers/udc_pike2/
 libs-y += drivers/usb/host/
 libs-y += drivers/usb/musb/
 libs-y += drivers/usb/musb-new/
@@ -699,7 +702,7 @@ libs-y += common/dloader/
 libs-y += test/
 libs-y += test/dm/
 libs-$(CONFIG_UT_ENV) += test/env/
-libs-y += test/memtest/
+libs-$(CONFIG_DDR_MEM_TEST) += test/memtest/
 
 libs-y += $(if $(BOARDDIR),board/$(BOARDDIR)/)
 
@@ -729,6 +732,13 @@ else
 PLATFORM_LIBDX =
 endif
 PLATFORM_LIBS += $(PLATFORM_LIBDX)
+ifeq ($(CONFIG_UDC),y)
+ifeq ($(BSP_BOARD_ARCH), arm)
+PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc_32b
+else
+PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc
+endif
+endif
 export PLATFORM_LIBS
 export PLATFORM_LIBGCC
 

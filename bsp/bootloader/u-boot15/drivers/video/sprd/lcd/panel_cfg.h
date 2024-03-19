@@ -34,7 +34,23 @@ extern struct panel_driver rm67191_edo_driver;
 extern struct panel_driver r61350_truly_driver;
 extern struct panel_driver td4310_truly_driver;
 
+//AUTO_GEN_TAG_LCD_EXTERN
+#ifdef CONFIG_UDC_LCD
+extern chipram_env_t* get_chipram_env(void);
+extern struct panel_driver lcd_panel_udc_lcd;
+static struct panel_cfg lcd_panel[] = {
+	[0]={
+	.lcd_id = UDC_LCM_ID,
+	.drv = &lcd_panel_udc_lcd,
+	}
+
+};
+
+
+udc_lcd* g_sc9850_udc_lcd;
+#else
 static struct panel_cfg supported_panel[] = {
+#if 1//AUTO_GEN_TAG_LCD_CFG
 #ifdef CONFIG_LCD_FT8006P_HLT_MIPI_HDP
 	{
 		.lcd_id = 0xf0,
@@ -149,9 +165,11 @@ static struct panel_cfg supported_panel[] = {
 		.drv = &td4310_truly_driver,
 	},
 #endif
+#endif
 /* warning: the dummy lcd must be the last item in this array */
 	{
 		.lcd_id = 0xFFFF,
 		.drv = &dummy_mipi_driver,
 	},
 };
+#endif

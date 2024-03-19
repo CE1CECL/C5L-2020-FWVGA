@@ -12,6 +12,10 @@
 #include <adc_drvapi.h>
 #endif
 
+#ifdef CONFIG_UDC_LCD
+#include <udc.h>
+#include <chipram_env.h>
+#endif
 #if defined(CONFIG_I2C) && defined(CONFIG_SPI)
 extern struct panel_if_ctrl sprdfb_mcu_ctrl;
 #endif
@@ -96,12 +100,33 @@ extern struct panel_spec lcd_ft8006m_mipi_spec;
 extern struct panel_spec lcd_gc9503_jl_mipi_spec;
 extern struct panel_spec lcd_st7701_zgd_mipi_spec;
 extern struct panel_spec lcd_st7703_mipi_spec;
-
+//AUTO_GEN_TAG_LCD_EXTERN
 void sprdfb_panel_remove(struct sprdfb_device *dev);
 
 static ushort colormap[256];
 
+#ifdef CONFIG_UDC_LCD
+extern chipram_env_t* get_chipram_env(void);
+extern struct panel_spec lcd_panel_udc_lcd;
+static struct panel_cfg lcd_panel[] = {
+	[0]={
+	.lcd_id = UDC_LCM_ID,
+	.panel = &lcd_panel_udc_lcd,
+	}
+
+};
+
+
+vidinfo_t panel_info = {
+	.vl_bpix = 4,
+	.cmap = colormap,
+};
+
+
+udc_lcd* g_sc9850_udc_lcd;
+#else
 static struct panel_cfg panel_cfg[] = {
+#if 1//AUTO_GEN_TAG_LCD_CFG
 #if defined (CONFIG_FB_LCD_ILI9885_MIPI)
 	{
 		.lcd_id = 0x98,
@@ -638,12 +663,20 @@ static struct panel_cfg panel_cfg[] = {
 	.panel = &lcd_dummy_spi_spec,
 },
 #endif
+#endif
 
 {
 	.lcd_id = 0xFFFF,
 	.panel = &lcd_dummy_mipi_spec,
 },
 };
+
+vidinfo_t panel_info = {
+	.vl_bpix = 4,
+	.cmap = colormap,
+};
+
+#endif //end of CONFIG_UDC
 
 static int32_t panel_reset_dispc(struct panel_spec *self)
 {
@@ -722,7 +755,8 @@ static int panel_mount(struct sprdfb_device *dev, struct panel_spec *panel)
 
 	dev->panel = panel;
 
-#ifndef CONFIG_FB_SWDISPC
+#if ((!defined(CONFIG_FB_SWDISPC))&&(!defined(CONFIG_UDC_LCD)))
+	
 	if(NULL == dev->panel->ops->panel_reset){
 		dev->panel->ops->panel_reset = panel_reset_dispc;
 	}
@@ -764,6 +798,123 @@ int panel_ready(struct sprdfb_device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_UDC_LCD
+
+static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
+{
+	FB_PRINT("sprdfb_udc_lcd: [%s]\n",__FUNCTION__);
+
+	int i = 0;
+	uint32_t id;	
+	uint16_t sec_id = SEC_LCD0;
+	uint16_t ret = 0;
+	boot_mode_t boot_role;
+	chipram_env_t* cr_env = get_chipram_env();
+	boot_role = cr_env->mode;
+	if(boot_role == BOOTLOADER_MODE_DOWNLOAD)
+	{
+		printf("%s: download mode\r\n");
+		return NULL;
+	}
+	g_sc9850_udc_lcd = udc_lcd_create(SEC_LCD0, &lcd_panel[0]); 
+
+	while(1)
+	{        
+		ret = udc_lcd_config_panel(g_sc9850_udc_lcd, sec_id++);
+		if(!ret)
+		{
+			// Alex.shi 走到这里说明udc.bin中的lcd配置都读id失败.  
+			//		如果这样的话,我们选择udc.bin里面最后一个屏  			
+			//		这边存在一个风险:udc.bin中不包含lcd时会有问题，但这不可能  
+#if 1 //def CONFIG_ZYT_SUPPORT	// Alex.shi Resolve the problem:can't save to flash when calibrating without lcm
+			debugf("Alex.shi sprdfb_udc_lcd: [%s]: final failed to attach LCD Panel,try panel id 0x%x\n", __FUNCTION__, lcd_panel[i].lcd_id);
+			panel_mount(dev, lcd_panel[i].panel);
+			panel_init(dev);
+			
+			if(NULL != dev->panel->ops->power){
+				dev->panel->ops->power(dev->panel,true);
+			}
+			
+			id = 0xffff;//lcd_panel[i].lcd_id; add by jinq for no lcd concition
+			dev->panel->ops->panel_init(dev->panel);
+			save_lcd_id_to_kernel(id);
+			panel_ready(dev);
+			//panel_info.vl_col = lcd_panel[0].panel->width;
+			//panel_info.vl_row = lcd_panel[0].panel->height;
+			//panel_info.vl_bpix = LCD_BPP;
+			//lcd_line_length = (panel_info.vl_col * NBITS (panel_info.vl_bpix)) / 8;
+			//FB_PRINT("Alex.shi sprdfb_udc_lcd: [%s]: width=%d, height=%d, bpp=%d, lcd_line_length=%d\n", __FUNCTION__, panel_info.vl_col, panel_info.vl_row, panel_info.vl_bpix, lcd_line_length);
+			return lcd_panel[i].panel;
+#else
+			printf("%s: udc_load_config panel failed\r\n");
+			return NULL;
+#endif
+		}
+
+		//first ,try mount
+		panel_mount(dev, lcd_panel[i].panel);
+		/* +++++++++++++++add begin+++++++++++++++*/
+#ifdef CONFIG_UDC_VER_5_1_3
+		//fangjie
+		printf("fangjie:update_clk  -----------------------------\r\n");
+		if(dev->ctrl->update_clk)
+			dev->ctrl->update_clk(dev);
+#endif
+		/* +++++++++++++++add end+++++++++++++++*/		
+		//hw init to every panel
+		panel_init(dev);
+
+		//reset
+		if(NULL != dev->panel->ops->power){
+			dev->panel->ops->power(dev->panel,true);
+		}
+		
+		//readid
+		id = dev->panel->ops->panel_readid(dev->panel);
+
+#if 1 /*change by wangming for auto gencode*/
+		if(id == lcd_panel[i].lcd_id) 
+		{
+			printf("sprdfb_udc_lcd: [%s]: LCD Panel 0x%x is attached!\n", __FUNCTION__, lcd_panel[i].lcd_id);
+#else
+		if(id > 0)
+		{
+			printf("sprdfb_udc_lcd: [%s]: LCD Panel 0x%x is attached!\n", __FUNCTION__, id);
+#endif
+			dev->panel->ops->panel_init(dev->panel);		
+			save_lcd_id_to_kernel(id);
+			panel_ready(dev);
+
+		//	panel_info.vl_col = lcd_panel[0].panel->width;
+		//	panel_info.vl_row = lcd_panel[0].panel->height;
+		//	panel_info.vl_bpix = LCD_BPP;
+		//	lcd_line_length = (panel_info.vl_col * NBITS (panel_info.vl_bpix)) / 8;
+
+			return lcd_panel[i].panel;
+		}
+		else 
+		{							
+			FB_PRINT("sprdfb_udc_lcd: [%s]: LCD Panel 0x%x attached fail!go next\n ", __FUNCTION__, lcd_panel[i].lcd_id);
+			if(NULL != dev->panel->ops->power){
+				dev->panel->ops->power(dev->panel,false);
+			}
+			sprdfb_panel_remove(dev);				
+		}
+
+		if ( 0 == ret)
+		{
+			printf("%s: can not load config panel\r\n");
+			return NULL;
+		}
+
+	}
+	FB_PRINT("sprdfb:  [%s]: final failed to attach LCD Panel!\n", __FUNCTION__);
+	return NULL;
+}
+
+
+#else
 
 #ifdef LCM_SAME_IC_SUPPORT
 static int32_t LCM_SAME_IC_ADC_GetValue()
@@ -812,7 +963,8 @@ static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
 		save_lcd_adc_to_kernel(id_adc);
 #endif
 		id = dev->panel->ops->panel_readid(dev->panel);
-		if(id == panel_cfg[i].lcd_id) {
+		if(id > 0) {   //add by jinq for script modify
+			panel_cfg[i].lcd_id=id;
 			debugf("sprdfb: [%s]: LCD Panel 0x%x is attached!\n", __FUNCTION__, panel_cfg[i].lcd_id);
 
 			if(NULL != dev->panel->ops->panel_init){
@@ -831,6 +983,8 @@ static struct panel_spec *adapt_panel_from_readid(struct sprdfb_device *dev)
 	errorf("sprdfb:  [%s]: final failed to attach LCD Panel!\n", __FUNCTION__);
 	return NULL;
 }
+
+#endif
 
 uint16_t sprdfb_panel_probe(struct sprdfb_device *dev)
 {

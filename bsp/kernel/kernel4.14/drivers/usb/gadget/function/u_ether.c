@@ -559,18 +559,9 @@ static int alloc_requests(struct eth_dev *dev, struct gether *link, unsigned n)
 	int	pad_len = 4;
 
 	spin_lock(&dev->req_lock);
-
-	if (!strcmp(link->func.name, "cdc_network")) {
-		status = prealloc(&dev->tx_reqs, link->in_ep, n);
-	} else if (!strcmp(link->func.name, "rndis")) {
-		status = prealloc_sg(&dev->tx_reqs, link->in_ep, n * tx_qmult,
+	status = prealloc_sg(&dev->tx_reqs, link->in_ep, n * tx_qmult,
 				dev->sg_enabled,
 				dev->header_len + pad_len);
-	} else {
-		pr_err("Function name error\n");
-		goto fail;
-	}
-
 	if (status < 0)
 		goto fail;
 	status = prealloc(&dev->rx_reqs, link->out_ep, n);
@@ -2146,16 +2137,13 @@ struct net_device *gether_connect(struct gether *link)
 	 * req->buf which is allocated later
 	 */
 	if (!dev->sg_enabled) {
-		if (!strcmp(link->func.name, "rndis")) {
-			/* size of rndis_packet_msg_type */
-			link->header = kzalloc(
-					sizeof(struct rndis_packet_msg_type),
-					GFP_ATOMIC);
-			if (!link->header) {
-				pr_err("RNDIS header memory allocation failed.\n");
-				result = -ENOMEM;
-				return ERR_PTR(result);
-			}
+		/* size of rndis_packet_msg_type */
+		link->header = kzalloc(sizeof(struct rndis_packet_msg_type),
+				       GFP_ATOMIC);
+		if (!link->header) {
+			pr_err("RNDIS header memory allocation failed.\n");
+			result = -ENOMEM;
+			return ERR_PTR(result);
 		}
 	}
 
@@ -2228,8 +2216,7 @@ fail0:
 	/* caller is responsible for cleanup on error */
 	if (result < 0) {
 		if (!dev->sg_enabled)
-			if (!strcmp(link->func.name, "rndis"))
-				kfree(link->header);
+			kfree(link->header);
 		return ERR_PTR(result);
 	}
 	return dev->net;

@@ -164,7 +164,11 @@ void board_boot_mode_regist(CBOOT_MODE_ENTRY *array)
 static void battery_init(void)
 {
 	sprdchg_common_cfg();
+#if defined(CONFIG_FAN54015_CHARGE_IC)
+	sprdchg_fan54015_init();
+#else
 	sprdchg_2720_init();
+#endif
 	sprdbat_init();
 }
 

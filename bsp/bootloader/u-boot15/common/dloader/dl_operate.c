@@ -735,15 +735,16 @@ OPERATE_STATUS _download_image(void)
 	}
 	write_start = g_eMMCBuf + strip_header;
 
+	if (!strcmp(g_dl_eMMCStatus.curUserPartitionName, "userdata")) {
+		debugf("userdata image format is %d\n", g_dl_eMMCStatus.curImgType);
+		get_img_partition_size(g_dl_eMMCStatus.curUserPartitionName, &total_size);
+		common_raw_erase(g_dl_eMMCStatus.curUserPartitionName, total_size/100, (uint64_t)0LL);
+	}
+
 	/*sparse image*/
 	if (IMG_WITH_SPARSE == g_dl_eMMCStatus.curImgType) {
 		debugf("Handle the saving of image with sparse,name=%s,buf start at %p,size=0x%x\n",
 		       g_dl_eMMCStatus.curUserPartitionName, write_start, write_size);
-
-		if (!strcmp(g_dl_eMMCStatus.curUserPartitionName, "userdata")) {
-			get_img_partition_size(g_dl_eMMCStatus.curUserPartitionName, &total_size);
-			common_raw_erase(g_dl_eMMCStatus.curUserPartitionName, total_size/100, (uint64_t)0LL);
-		}
 
 		retval = write_sparse_img(g_dl_eMMCStatus.curUserPartitionName, write_start, (ulong)write_size);
 		if (-1 == retval) {
@@ -785,8 +786,27 @@ OPERATE_STATUS _download_image(void)
 			errorf("write %s size 0x%x offset 0x%x fail\n", g_dl_eMMCStatus.curUserPartitionName, write_size, g_dl_eMMCStatus.offset);
 			g_status.unsave_recv_size = 0;
 			return OPERATE_WRITE_ERROR;
+		} else if (is_f2fs_filesystem(g_dl_eMMCStatus.curUserPartitionName)) {
+			total_size = 0;
+			debugf("write %s size 0x%x offset 0x%x ok\n", g_dl_eMMCStatus.curUserPartitionName, write_size, g_dl_eMMCStatus.offset);
+			get_img_partition_size(g_dl_eMMCStatus.curUserPartitionName, &total_size);
+			if (emmc_buf_size < (total_size/128)) {
+				errorf("resize skip! small buffer, config dts!\n");
+			} else {
+				retval = f2fs_resize_main(total_size,
+					512,
+					f2fs_write_callback,
+					f2fs_read_callback,
+					(void*)g_dl_eMMCStatus.curUserPartitionName,
+					g_eMMCBuf,
+					emmc_buf_size);
+				if (retval==0) {
+					debugf("resize userdata ok\n");
+				} else {
+					errorf("resize userdata error or Nothing to resize\n");
+				}
+			}
 		}
-
 		g_dl_eMMCStatus.offset += write_size;
 		g_status.unsave_recv_size = 0;
 	}

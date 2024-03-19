@@ -10,6 +10,7 @@
 #include <linux/platform_device.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
+#include <linux/regulator/consumer.h>
 
 /* PMIC global registers definition */
 #define SC2731_MODULE_EN		0xc08
@@ -71,6 +72,7 @@
 	(((n) << SC27XX_RATIO_NUMERATOR_OFFSET) | (d))
 #define SC27XX_RATIO_NUMERATOR_OFFSET	16
 #define SC27XX_RATIO_DENOMINATOR_MASK	GENMASK(15, 0)
+struct regulator  *volref;
 
 struct sc27xx_adc_data {
 	struct device *dev;
@@ -778,6 +780,19 @@ static const struct sc27xx_adc_variant_data sc2720_data = {
 	.get_ratio = sc2720_adc_get_ratio,
 };
 
+int sc27xx_adc_verf_cfg(int voltage)
+{
+	int ret;
+
+	ret = regulator_set_voltage(volref, voltage, voltage);
+	if (ret) {
+		pr_err("failed to set the volref regulator voltage.\n");
+		return ret;
+	}
+	return 0;
+}
+EXPORT_SYMBOL_GPL(sc27xx_adc_verf_cfg);
+
 static int sc27xx_adc_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
@@ -851,6 +866,14 @@ static int sc27xx_adc_probe(struct platform_device *pdev)
 		sc27xx_adc_disable(sc27xx_data);
 		dev_err(&pdev->dev, "failed to add ADC disable action\n");
 		return ret;
+	}
+
+	if (of_device_is_compatible(pdev->dev.of_node, "sprd,sc2721-adc")) {
+		volref = devm_regulator_get(&pdev->dev, "verf");
+		if (IS_ERR(volref)) {
+			dev_err(&pdev->dev, "failed to get verf regulator\n");
+			return PTR_ERR(volref);
+		}
 	}
 
 	indio_dev->dev.parent = &pdev->dev;

@@ -111,7 +111,11 @@ int misc_init_r(void)
 static void battery_init(void)
 {
 	sprdchg_common_cfg();
+#if defined(CONFIG_SC2721_CHARGE_IC)
+	sprdchg_2721_init();
+#else
 	sprdchg_fan54015_init();
+#endif
 	sprdbat_init();
 }
 

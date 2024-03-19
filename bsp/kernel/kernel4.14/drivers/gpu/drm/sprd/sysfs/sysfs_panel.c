@@ -416,7 +416,11 @@ static ssize_t load_lcddtb_store(struct device *dev,
 		lcdnp = root->child->child;
 		if (lcdnp) {
 			pr_err("lcd device node name %s\n", lcdnp->full_name);
+			#ifdef CONFIG_UDC
+			udc_lcd_create(SEC_LCD0, panel);
+			#else
 			sprd_panel_parse_lcddtb(lcdnp, panel);
+			#endif
 		}
 	}
 

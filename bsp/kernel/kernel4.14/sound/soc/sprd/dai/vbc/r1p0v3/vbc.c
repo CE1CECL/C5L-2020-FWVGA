@@ -45,6 +45,8 @@
 #include "vbc.h"
 #include "vbc-codec.h"
 
+#include <soc/sprd/board.h>
+
 #if defined(pr_fmt)
 #undef pr_fmt
 #endif
@@ -1106,6 +1108,9 @@ static int vbc_parse_dt(struct platform_device *pdev)
 	    ("vbc_iis_lr_invert[0]=[%#x][1]=%#x[2]=%#x",
 	     vbc_codec->vbc_iis_lr_invert[0], vbc_codec->vbc_iis_lr_invert[1],
 	     vbc_codec->vbc_iis_lr_invert[2]);
+#ifdef ZCFG_SND_SOC_SPRD_VBC_LR_INVERT
+    vbc_codec->vbc_iis_lr_invert[0]=1;
+#endif
 	for (i = 0; i < VBC_IDX_MAX; i++)
 		pr_info(" vbc_idx[%d] vbc_use_dma_type = %s", i,
 			(vbc_codec->vbc_use_dma_type[i] == 0) ?

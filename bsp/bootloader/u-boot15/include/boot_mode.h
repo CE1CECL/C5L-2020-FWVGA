@@ -1,8 +1,13 @@
 #ifndef _BOOT_MODE_H_
 #define _BOOT_MODE_H_
 #include <common.h>
+#include "soc/sprd/board.h"
 
+#ifdef CUSTOM_BACKLIGHT_ON
+#define BACKLIGHT_ON CUSTOM_BACKLIGHT_ON
+#else
 #define BACKLIGHT_ON 25
+#endif
 #define BACKLIGHT_OFF 0
 #define LCD_ON 1
 #define LCD_OFF 0

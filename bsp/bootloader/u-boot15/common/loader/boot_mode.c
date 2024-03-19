@@ -75,6 +75,10 @@ void normal_mode(void)
 	vibrator_hw_init();
 
 	set_vibrator(1);
+     #ifdef CQ_VIBRATION_TIME
+	mdelay(450);
+	set_vibrator(0);
+     #endif
 	vlx_nand_boot(BOOT_PART, BACKLIGHT_ON, LCD_ON);
 #else
 	vlx_nand_boot_zebu(BOOT_PART, BACKLIGHT_ON, LCD_ON);

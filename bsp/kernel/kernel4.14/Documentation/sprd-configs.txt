@@ -710,6 +710,16 @@ CONFIG_ARM64_HW_AFDBM
 	[missing plat description] none
 	[function] The ARMv8.1 architecture extensions introduce support for
 		hardware updates of the access and dirty information in page.
+CONFIG_ARM64_LSE_ATOMICS
+	[arch] arm64
+	[plat] roc1,sharkl3,sharkl5,sharkl5Pro
+	[missing plat] none
+	[field] make,code
+	[subsys] arch
+	[must] user
+	[missing plat description] none
+	[function] ARMv8.1 introduces new atomic instructions that
+		are designed specifically to scale in very large systems.
 CONFIG_ARM64_MODULE_CMODEL_LARGE
 	[arch] arm64
 	[plat] roc1,sharkl3,sharkl5,sharkl5Pro
@@ -1865,6 +1875,15 @@ CONFIG_CHARGER_SC2720
 	[must] user
 	[missing plat description] Not used in the project, so no configuration
 	[function] This function is used to enable charge
+CONFIG_CHARGER_SC2721
+        [arch] arm
+        [plat] sharkle32
+        [missing plat] pike2,sharkl3_32,sharkl5_32
+        [field] make
+        [subsys] power
+        [must] user
+        [missing plat description] Not used in the project, so no configuration
+        [function] This function is used to enable charge
 CONFIG_CLEANCACHE
 	[arch] arm64
 	[plat] roc1,sharkl3,sharkl5,sharkl5Pro

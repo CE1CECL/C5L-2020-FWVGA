@@ -3128,6 +3128,11 @@ void write_sysdump_before_boot(int rst_mode)
 	if(ERROR_FNISH == init_dt_info())
 		goto FINISH;
 
+	// Alex.shi 19.11.29 before CheckSDCard,wait_for_keypress()--Start
+	dump_logd("\nAfter insert SDCard,Press any key(Exp power key) to continue...\n");
+	sysdump_lcd_printf("\nAfter insert SDCard,Press any key(Exp power key) to continue...");
+	wait_for_keypress();
+	// Alex.shi 19.11.29 before CheckSDCard,wait_for_keypress()--End
 	check_path_valid();
 	show_check_path_status_result();
 

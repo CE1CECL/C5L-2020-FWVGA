@@ -64,6 +64,9 @@
 #include <asm/xen/hypervisor.h>
 #include <asm/mmu_context.h>
 
+#ifdef CONFIG_UDC
+#include <linux/udc.h>
+#endif
 phys_addr_t __fdt_pointer __initdata;
 
 /*
@@ -329,8 +332,21 @@ void __init setup_arch(char **cmdline_p)
 			"This indicates a broken bootloader or old kernel\n",
 			boot_args[1], boot_args[2], boot_args[3]);
 	}
-}
 
+}
+static int __init arm64_device_init(void)
+{
+	#ifdef CONFIG_UDC 
+
+			udc_create( );
+	#endif
+		
+	#ifdef CONFIG_UDC_GPIO    
+			udc_gpio_init();
+	#endif
+	return 0;
+}
+arch_initcall_sync(arm64_device_init);
 static int __init topology_init(void)
 {
 	int i;

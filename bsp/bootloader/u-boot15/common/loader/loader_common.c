@@ -19,6 +19,12 @@
 #include <asm/arch/sprd_reg.h>
 #include <hwfeature.h>
 
+#include "soc/sprd/board.h"
+#ifdef ZCFG_KEY_VOLUME_DOWN_ANTI_SHAKE
+#include <asm/io.h>
+#include <asm/arch/pinmap.h>
+#endif
+
 #define DECOUPLING_INFO_PARTITION "modem"
 #ifdef CONFIG_SUPPORT_NR
 #define DECOUPLING_INFO_PARTITION_NRPHY "nrphy"
@@ -32,7 +38,9 @@ char serial_number_to_transfer[SP15_MAX_SN_LEN];
 
 extern int charger_connected(void);
 extern void modem_entry(void);
-
+#ifdef ZCFG_BOOT_DDR_MEMTEST
+extern void ddr_memtester(void);
+#endif
 unsigned short calc_checksum(unsigned char *dat, unsigned long len)
 {
 	unsigned short num = 0;
@@ -180,6 +188,9 @@ void fdt_fixup_all(u8 *fdt_blob)
 	/* board kernel cmdline in header of boot.img */
 	fdt_fixup_board_kernel_cmdline(fdt_blob);
 #endif
+#ifdef CONFIG_UDC
+		fdt_fixup_udc_cmdline(fdt_blob);
+#endif
 
 	/* if enabled, set loglevel = 7*/
 	fdt_fixup_loglevel(fdt_blob);
@@ -199,6 +210,7 @@ void fdt_fixup_all(u8 *fdt_blob)
 	if(reboot_mode_check() != CMD_TOS_PANIC_MODE)
 		fdt_fixup_tee_reserved_mem(fdt_blob);
 #endif
+
 	return;
 }
 
@@ -387,6 +399,10 @@ void vlx_entry(uchar *dt_addr)
 	printf("enter mode %s, consume time: %dms\n",
 		!bootmode ? "normal" : bootmode, consume_time);
 
+    #ifdef ZCFG_KEY_VOLUME_DOWN_ANTI_SHAKE
+    __raw_writel(0x10, CTL_PIN_BASE + 0x208);
+    #endif
+
 	/* the last time to write log */
 	write_log_last();
 
@@ -396,6 +412,13 @@ void vlx_entry(uchar *dt_addr)
 	/*shutdown usb ldo, can't shutdown it in the ldo_sleep.c because download mode must use usb */
 	usb_driver_exit();
 
+	/* start ddr memtest */
+#ifdef ZCFG_BOOT_DDR_MEMTEST
+	if (!bootmode) 
+	{
+		ddr_memtester();
+	}
+#endif
 #ifdef CONFIG_ARM64
 	smp_kick_all_cpus();
 	start_linux_armv8(dt_addr);

@@ -212,4 +212,21 @@ source "drivers/tee/Kconfig"
 source "drivers/mux/Kconfig"
 
 source "drivers/trusty/Kconfig"
+source "drivers/udc/Kconfig"
+config ZYT_ALSPS_LIST
+	string "ZYT_ALSPS_LIST"
+	help
+	  To choose kernel ALSPS driver name
+config ZYT_GSENSOR_LIST
+	string "ZYT_GSENSOR_LIST"
+	help
+	  To choose kernel GSENSOR driver name	  
+config ZYT_TP_LIST
+	string "ZYT_TP_LIST"
+	help
+	  To choose kernel TP driver name	  
+config ZYT_LCM_LIST
+	string "ZYT_LCM_LIST"
+	help
+	  To choose kernel LCM driver name
 endmenu
