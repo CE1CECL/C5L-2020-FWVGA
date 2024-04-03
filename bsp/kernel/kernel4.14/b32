@@ -1,1 +1,4 @@
-# CECL / TBD
+clear
+rm -rfv $(pwd)/O32
+make O=$(pwd)/O32 ARCH=arm CROSS_COMPILE=$(pwd)/T32/bin/arm-linux-androideabi- sprd_defconfig
+make O=$(pwd)/O32 ARCH=arm CROSS_COMPILE=$(pwd)/T32/bin/arm-linux-androideabi- Image dtbs modules
