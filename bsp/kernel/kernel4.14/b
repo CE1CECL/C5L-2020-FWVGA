@@ -1,4 +1,0 @@
-clear
-rm -rfv $(pwd)/O
-make O=$(pwd)/O ARCH=arm64 CROSS_COMPILE=$(pwd)/T/bin/aarch64-linux-android- sprd_defconfig
-make O=$(pwd)/O ARCH=arm64 CROSS_COMPILE=$(pwd)/T/bin/aarch64-linux-android- Image dtbs modules

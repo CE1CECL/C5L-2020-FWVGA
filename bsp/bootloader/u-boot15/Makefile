@@ -732,13 +732,13 @@ else
 PLATFORM_LIBDX =
 endif
 PLATFORM_LIBS += $(PLATFORM_LIBDX)
-#ifeq ($(CONFIG_UDC),y)
-#ifeq ($(BSP_BOARD_ARCH), arm)
-#PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc_32b
-#else
+ifeq ($(CONFIG_UDC),y)
+ifeq ($(BSP_BOARD_ARCH), arm)
+PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc_32b
+else
 PLATFORM_LIBS += -L$(srctree)/drivers/udc/ -ludc
-#endif
-#endif
+endif
+endif
 export PLATFORM_LIBS
 export PLATFORM_LIBGCC
 
