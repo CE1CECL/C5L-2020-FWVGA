@@ -1,4 +1,4 @@
 clear
 rm -rfv $(pwd)/O64
-make O=$(pwd)/O64 ARCH=arm64 CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- sprd_defconfig
-make O=$(pwd)/O64 ARCH=arm64 CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- Image dtbs modules
+make -j$(nproc --all) O=$(pwd)/O64 ARCH=arm64 CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- sprd_defconfig
+make -j$(nproc --all) O=$(pwd)/O64 ARCH=arm64 CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- Image dtbs modules

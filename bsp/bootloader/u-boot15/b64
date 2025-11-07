@@ -1,6 +1,6 @@
 clear
 rm -rfv $(pwd)/O64
-make DEVICE_TREE=sp9832e_1h10 O=$(pwd)/O64 ARCH=arm CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- sl8541e_1h10_defconfig
-make DEVICE_TREE=sp9832e_1h10 O=$(pwd)/O64 ARCH=arm CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android-
+make -j$(nproc --all) DEVICE_TREE=sp9832e_1h10 O=$(pwd)/O64 ARCH=arm CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android- sp9832e_1h10_defconfig
+make -j$(nproc --all) DEVICE_TREE=sp9832e_1h10 O=$(pwd)/O64 ARCH=arm CROSS_COMPILE=$(pwd)/T64/bin/aarch64-linux-android-
 ./imgheaderinsert ./O64/u-boot.bin 1
 ./imgheaderinsert ./O64/u-boot-dtb.bin 1
